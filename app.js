@@ -15,6 +15,9 @@ let counting = turboDuration;
 
 let bombs;
 let gameOver = false;
+const touchDevice = ('ontouchstart' in document.documentElement);
+let btnLeftPressed = false;
+let btnRightPressed = false;
 
 const enableTurbo = () => {
     clearInterval(timer);
@@ -52,7 +55,47 @@ const createBomb = () => {
     bomb.setCollideWorldBounds(true);
     bomb.setVelocity(Phaser.Math.Between(-200, 200), 20);
     bomb.setBounce(1);
-}
+};
+
+const playerMove = (speed, anim) => {
+    player.setVelocityX(speed);
+    player.anims.play(anim, true);
+};
+
+const playerMoveLeft = () => playerMove(-((turbo) ? 320 : 160), 'left');
+
+
+const playerMoveRight = () => playerMove((turbo) ? 320 : 160, 'right');
+
+const playerStop = () => playerMove(0, 'turn');
+
+const playerJump = () => player.setVelocityY(-500);
+
+const createVirtualButtons = (context) => {
+    const btnConfig = {
+        fontSize: '30px',
+        fill: '#FFF'
+    };
+    context.add.text(50, 550, 'Left', btnConfig)
+        .setInteractive()
+        .on('pointerdown', () => {
+            btnLeftPressed = true;
+            btnRightPressed = false;
+        });
+
+    context.add.text(180, 550, 'Right', btnConfig)
+        .setInteractive()
+        .on('pointerdown', () => {
+            btnRightPressed = true;
+            btnLeftPressed = false;
+        });
+
+    context.add.text(600, 550, 'Jump', btnConfig)
+        .setInteractive()
+        .on('pointerdown', () => {
+            playerJump();
+        });
+};
 
 const preload = function() {
     this.load.image('sky', 'assets/sky.png');
@@ -166,24 +209,23 @@ const create = function() {
     scoreText = this.add.text(16, 10, `Score: ${score}`, textConfig);
     turboText = this.add.text(width - 150, 10, '', textConfig);
     createBomb();
+    if (touchDevice) {
+        createVirtualButtons(this);
+    }
 };
 
 const update = function() {
     const { left, right, up, down } = cursors;
-    const speedX = (turbo) ? 320 : 160;
-    if (left.isDown) {
-        player.setVelocityX(-speedX);
-        player.anims.play('left', true);
-    } else if (right.isDown) {
-        player.setVelocityX(speedX);
-        player.anims.play('right', true);
+    if (left.isDown || btnLeftPressed) {
+        playerMoveLeft();
+    } else if (right.isDown || btnRightPressed) {
+        playerMoveRight();
     } else {
-        player.setVelocityX(0);
-        player.anims.play('turn');
+        playerStop();
     }
 
     if (up.isDown && (player.body.touching.down || turbo)) {
-        player.setVelocityY(-500);
+        playerJump();
     }
 
     if (down.isDown && !turbo) {
